@@ -45,7 +45,7 @@ function App() {
       if (timeStart.current + 1200000 - Date.now() <= 0) {
         setTimeRemaining(0);
         startBreak();
-        console.log("starting break")
+        console.log("starting break");
       } else {
         console.log(Date.now());
         console.log(timeStart.current);
@@ -75,7 +75,15 @@ function App() {
   return (
     <div className="w-full h-full">
       <div className="flex flex-col gap-2 items-center justify-center h-full w-full">
-        <div className="bg-amber-800 w-1/2 p-8 rounded-sm text-center font-bold text-5xl">
+        <div
+          style={{
+            background: `linear-gradient(to right,#943900 ${String(
+              (timeRemaining / 1200000) * 100
+            )}%, #572100 ${(timeRemaining / 1200000) * 100}%)`,
+          }}
+          className="
+            w-1/2 p-8 rounded-sm text-center font-bold text-5xl"
+        >
           {Math.floor(timeRemaining / 60000)}:
           {String(Math.floor((timeRemaining % 60000) / 1000)).padStart(2, "0")}
         </div>
