@@ -33,6 +33,7 @@ function App() {
   const [timeRemaining, setTimeRemaining] = useState(1200000);
   const [breakStarted, setBreakStarted] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const pauseCheckpoint = useRef<number>(0);
 
   const intervalId = useRef(0);
 
@@ -101,12 +102,19 @@ function App() {
   }
 
   function resumeTimerButtonClicked() {
-    setIsPaused(false)
-    resumeTimer()
+    setIsPaused(false);
+    timeStart.current = Date.now() - pauseCheckpoint.current;
+    if (breakStarted) {
+      resumeBreak();
+    } else {
+      resumeTimer();
+    }
   }
   function pauseTimerButtonClicked() {
-    setIsPaused(true)
-    stopTimers()
+    console.log("Trying to stop timers...");
+    pauseCheckpoint.current = Date.now() - timeStart.current;
+    setIsPaused(true);
+    stopTimers();
   }
   return (
     <div className="w-full h-full">
@@ -150,13 +158,18 @@ function App() {
         <div className="flex flex-row gap-3">
           {started ? (
             isPaused ? (
-              <button onClick={resumeTimerButtonClicked} className="bg-green-950 rounded-full p-6 flex flex-row gap-2 border-green-900 border-3 border-solid hover:bg-green-900">
+              <button
+                onClick={resumeTimerButtonClicked}
+                className="bg-green-950 rounded-full p-6 flex flex-row gap-2 border-green-900 border-3 border-solid hover:bg-green-900"
+              >
                 <PlayIcon width={24} height={24} />
                 <p>Continue</p>
               </button>
             ) : (
-              
-              <button onClick={pauseTimerButtonClicked} className="bg-green-950 rounded-full p-6 flex flex-row gap-2 border-green-900 border-3 border-solid hover:bg-green-900">
+              <button
+                onClick={pauseTimerButtonClicked}
+                className="bg-green-950 rounded-full p-6 flex flex-row gap-2 border-green-900 border-3 border-solid hover:bg-green-900"
+              >
                 <PauseIcon width={24} height={24} />
                 <p>Pause</p>
               </button>
@@ -228,7 +241,9 @@ function App() {
           </div>
         </div>
       </div>
-      <div className="bg-amber-950 p-8 w-1/2 h-1/2 rounded-sm absolute "></div>
+      <div className="bg-amber-950 p-8 w-1/2 h-1/2 rounded-sm absolute top-1/2 left-1/2 -translate-1/2">
+          <h2>Time to take a break!</h2>
+      </div>
     </div>
   );
 }
