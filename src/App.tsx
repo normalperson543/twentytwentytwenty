@@ -9,8 +9,10 @@ import {
   PlayIcon,
   SquareStopIcon,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-
+import { useRef, useState } from "react";
+import startTimerFile from "./assets/start-timer.mp3";
+import startBreakFile from "./assets/start-break.mp3";
+import endBreakFile from "./assets/end-break.mp3";
 function App() {
   let lsBreaks = localStorage.getItem("breaks");
   let lsDayStreaks = localStorage.getItem("dayStreaks");
@@ -27,19 +29,28 @@ function App() {
   const [breaks, setBreaks] = useState(Number(lsBreaks));
   const [dayStreaks, setDayStreaks] = useState(Number(lsDayStreaks));
   const [started, setStarted] = useState(false);
-
   const timeStart = useRef<number>(0);
   const [timeRemaining, setTimeRemaining] = useState(1200000);
   const [breakStarted, setBreakStarted] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   const intervalId = useRef(0);
 
+  const startTimerAudio = new Audio(startTimerFile);
+  const startBreakAudio = new Audio(startBreakFile);
+  const endBreakAudio = new Audio(endBreakFile);
+
   function startTimer() {
-    console.log("timer")
+    startTimerAudio.play();
+    console.log("timer");
     stopTimers();
     timeStart.current = Date.now();
     setStarted(true);
-    setBreakStarted(false)
+    setBreakStarted(false);
+    resumeTimer();
+  }
+
+  function resumeTimer() {
     intervalId.current = setInterval(() => {
       if (timeStart.current + 1200000 - Date.now() <= 0) {
         setTimeRemaining(0);
@@ -52,15 +63,19 @@ function App() {
       }
     }, 100);
   }
-
   function startBreak() {
+    startBreakAudio.play();
     console.log("Bnreak");
     stopTimers();
     timeStart.current = Date.now();
     setBreakStarted(true);
+    resumeBreak();
+  }
+
+  function resumeBreak() {
     intervalId.current = setInterval(() => {
       if (timeStart.current + 20000 - Date.now() <= 0) {
-        nextRound()
+        nextRound();
       } else {
         setTimeRemaining(timeStart.current + 20000 - Date.now());
       }
@@ -78,12 +93,21 @@ function App() {
   }
 
   function nextRound() {
-    setBreaks(breaks + 1)
-    localStorage.setItem("breaks", breaks.toString())
+    endBreakAudio.play();
+    setBreaks(breaks + 1);
+    localStorage.setItem("breaks", breaks.toString());
     setTimeRemaining(0);
     startTimer();
   }
 
+  function resumeTimerButtonClicked() {
+    setIsPaused(false)
+    resumeTimer()
+  }
+  function pauseTimerButtonClicked() {
+    setIsPaused(true)
+    stopTimers()
+  }
   return (
     <div className="w-full h-full">
       <div className="flex flex-col gap-2 items-center justify-center h-full w-full">
@@ -125,10 +149,18 @@ function App() {
         </div>
         <div className="flex flex-row gap-3">
           {started ? (
-            <button className="bg-green-950 rounded-full p-6 flex flex-row gap-2 border-green-900 border-3 border-solid hover:bg-green-900">
-              <PauseIcon width={24} height={24} />
-              <p>Pause</p>
-            </button>
+            isPaused ? (
+              <button onClick={resumeTimerButtonClicked} className="bg-green-950 rounded-full p-6 flex flex-row gap-2 border-green-900 border-3 border-solid hover:bg-green-900">
+                <PlayIcon width={24} height={24} />
+                <p>Continue</p>
+              </button>
+            ) : (
+              
+              <button onClick={pauseTimerButtonClicked} className="bg-green-950 rounded-full p-6 flex flex-row gap-2 border-green-900 border-3 border-solid hover:bg-green-900">
+                <PauseIcon width={24} height={24} />
+                <p>Pause</p>
+              </button>
+            )
           ) : (
             <button
               onClick={startTimer}
@@ -181,7 +213,9 @@ function App() {
           <div className="flex flex-col gap-1">
             <div className="flex flex-row gap-1 items-center">
               <ClockCheckIcon width={24} height={24} />
-              <p className="text-2xl font-bold">{Math.round(breaks * (1/3) * 100) / 100}</p>
+              <p className="text-2xl font-bold">
+                {Math.round(breaks * (1 / 3) * 100) / 100}
+              </p>
             </div>
             <p>rested minutes</p>
           </div>
@@ -194,6 +228,7 @@ function App() {
           </div>
         </div>
       </div>
+      <div className="bg-amber-950 p-8 w-1/2 h-1/2 rounded-sm absolute "></div>
     </div>
   );
 }
