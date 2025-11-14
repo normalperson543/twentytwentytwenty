@@ -5,6 +5,7 @@ import {
   EyeClosedIcon,
   FastForwardIcon,
   FootprintsIcon,
+  InfoIcon,
   PauseIcon,
   PlayIcon,
   RulerIcon,
@@ -17,25 +18,39 @@ import endBreakFile from "./assets/end-break.mp3";
 import TimerBar from "./components/timer-bar";
 function App() {
   let lsBreaks = localStorage.getItem("breaks");
-  let lsDayStreaks = localStorage.getItem("dayStreaks");
+  let lsLastBreakDate = localStorage.getItem("lastBreakDate");
+  let lsBreakStreak = localStorage.getItem("breakStreak");
 
   if (!lsBreaks) {
     localStorage.setItem("breaks", "0");
     lsBreaks = "0";
   }
-  if (!lsDayStreaks) {
-    localStorage.setItem("dayStreaks", "0");
-    lsDayStreaks = "0";
+  if (!lsLastBreakDate) {
+    localStorage.setItem("lastBreakDate", "0");
+    lsLastBreakDate = "0";
+  }
+  if (!lsBreakStreak) {
+    localStorage.setItem("breakStreak", "0");
+    lsBreakStreak = "0";
+  }
+  if (Date.now() - Number(lsLastBreakDate) >= 86400000) {
+    localStorage.setItem("breakStreak", "0");
+    lsBreakStreak = "0";
+    localStorage.setItem("lastBreakDate", "0");
+    lsLastBreakDate = "0";
   }
 
+  const TIMER_MS = 1200000;
+  const BREAK_MS = 20000;
+
   const [breaks, setBreaks] = useState(Number(lsBreaks));
-  const [dayStreaks, setDayStreaks] = useState(Number(lsDayStreaks));
   const [started, setStarted] = useState(false);
   const timeStart = useRef<number>(0);
-  const [timeRemaining, setTimeRemaining] = useState(1200000);
+  const [timeRemaining, setTimeRemaining] = useState(TIMER_MS);
   const [breakStarted, setBreakStarted] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [readyToStartBreak, setReadyToStartBreak] = useState(false);
+  const [breakStreak, setBreakStreak] = useState(Number(lsBreakStreak));
   const pauseCheckpoint = useRef<number>(0);
 
   const intervalId = useRef(0);
@@ -56,18 +71,20 @@ function App() {
 
   function resumeTimer() {
     intervalId.current = setInterval(() => {
-      if (timeStart.current + 1200000 - Date.now() <= 0) {
+      if (timeStart.current + TIMER_MS - Date.now() <= 0) {
         setTimeRemaining(0);
+        prepareStartBreak();
       } else {
         console.log(Date.now());
         console.log(timeStart.current);
-        setTimeRemaining(timeStart.current + 1200000 - Date.now());
+        setTimeRemaining(timeStart.current + TIMER_MS - Date.now());
       }
     }, 100);
   }
   function startBreak() {
+    startTimerAudio.play();
     console.log("Bnreak");
-    setReadyToStartBreak(false)
+    setReadyToStartBreak(false);
     stopTimers();
     timeStart.current = Date.now();
     setBreakStarted(true);
@@ -76,10 +93,10 @@ function App() {
 
   function resumeBreak() {
     intervalId.current = setInterval(() => {
-      if (timeStart.current + 20000 - Date.now() <= 0) {
-        nextRound();
+      if (timeStart.current + BREAK_MS - Date.now() <= 0) {
+        nextRound(true);
       } else {
-        setTimeRemaining(timeStart.current + 20000 - Date.now());
+        setTimeRemaining(timeStart.current + BREAK_MS - Date.now());
       }
     }, 100);
   }
@@ -88,16 +105,21 @@ function App() {
     stopTimers();
     setStarted(false);
     setBreakStarted(false);
-    setTimeRemaining(1200000);
+    setTimeRemaining(TIMER_MS);
   }
   function stopTimers() {
     clearInterval(intervalId.current);
   }
 
-  function nextRound() {
+  function nextRound(valid = false) {
     endBreakAudio.play();
-    setBreaks(breaks + 1);
-    localStorage.setItem("breaks", breaks.toString());
+    console.log(valid);
+    if (valid) {
+      setBreaks(breaks + 1);
+      localStorage.setItem("breaks", (breaks + 1).toString());
+      localStorage.setItem("lastBreakDate", String(Date.now()));
+    }
+    setReadyToStartBreak(false);
     setTimeRemaining(0);
     startTimer();
   }
@@ -120,7 +142,7 @@ function App() {
   function prepareStartBreak() {
     startBreakAudio.play();
     setReadyToStartBreak(true);
-    stopTimers()
+    stopTimers();
   }
   return (
     <div className="w-full h-full">
@@ -129,7 +151,7 @@ function App() {
           <TimerBar
             progressBarBgColor="#002570"
             barBgColor="#001133"
-            progressPercentage={(timeRemaining / 20000) * 100}
+            progressPercentage={(timeRemaining / BREAK_MS) * 100}
           >
             {Math.floor(timeRemaining / 60000)}:
             {String(Math.floor((timeRemaining % 60000) / 1000)).padStart(
@@ -141,7 +163,7 @@ function App() {
           <TimerBar
             progressBarBgColor="#943900"
             barBgColor="#572100"
-            progressPercentage={(timeRemaining / 1200000) * 100}
+            progressPercentage={(timeRemaining / TIMER_MS) * 100}
           >
             {Math.floor(timeRemaining / 60000)}:
             {String(Math.floor((timeRemaining % 60000) / 1000)).padStart(
@@ -150,16 +172,16 @@ function App() {
             )}
           </TimerBar>
         )}
-        {breakStarted ?
+        {breakStarted ? (
           <div className="bg-blue-900 items-center justify-center flex flex-col text-center p-2 rounded-full relative -top-4">
             <p>until your break is over</p>
           </div>
-        :
+        ) : (
           <div className="bg-amber-900 items-center justify-center flex flex-col text-center p-2 rounded-full relative -top-4">
-          <p>until your next eye break</p>
-        </div>
-        }
-        
+            <p>until your next eye break</p>
+          </div>
+        )}
+
         <div className="flex flex-row gap-3">
           {started ? (
             isPaused ? (
@@ -190,7 +212,7 @@ function App() {
           )}
           {breakStarted ? (
             <button
-              onClick={nextRound}
+              onClick={() => nextRound(false)}
               className="bg-blue-900 rounded-full p-6 flex flex-row gap-2 border-blue-950 border-3 border-solid"
             >
               <FastForwardIcon width={24} height={24} />
@@ -245,7 +267,14 @@ function App() {
             <p>day streak</p>
           </div>
         </div>
+        {breakStarted && (
+          <div className="flex flex-row gap-3 items-center bg-amber-900 rounded-sm p-4">
+            <InfoIcon width={16} height={16} />
+            Look at something <b>20</b> feet away
+          </div>
+        )}
       </div>
+
       {readyToStartBreak && (
         <div className="bg-amber-950 p-8 w-1/2 h-1/2 rounded-sm absolute top-1/2 left-1/2 -translate-1/2 shadow-xl shadow-amber-900 flex flex-col gap-3 justify-center items-center">
           <div className="absolute -top-24 left-0 w-full shadow-xl shadow-blue-900">
@@ -289,7 +318,7 @@ function App() {
               <p>Start Break</p>
             </button>
             <button
-              onClick={nextRound}
+              onClick={() => nextRound(false)}
               className="bg-blue-900 rounded-full p-6 flex flex-row gap-2 border-blue-950 border-3 border-solid"
             >
               <FastForwardIcon width={24} height={24} />
