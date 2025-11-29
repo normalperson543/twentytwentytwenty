@@ -16,6 +16,13 @@ import startTimerFile from "./assets/start-timer.mp3";
 import startBreakFile from "./assets/start-break.mp3";
 import endBreakFile from "./assets/end-break.mp3";
 import TimerBar from "./components/timer-bar";
+
+function distanceBetweenDates(startTs: number, endTs: number) {
+  // https://www.geeksforgeeks.org/javascript/how-to-calculate-the-number-of-days-between-two-dates-in-javascript/
+  const timeDifference = endTs - startTs;
+  const daysDifference = timeDifference / (1000 * 3600 * 24);
+  return daysDifference;
+}
 function App() {
   let lsBreaks = localStorage.getItem("breaks");
   let lsLastBreakDate = localStorage.getItem("lastBreakDate");
@@ -32,12 +39,6 @@ function App() {
   if (!lsBreakStreak) {
     localStorage.setItem("breakStreak", "0");
     lsBreakStreak = "0";
-  }
-  if (Date.now() - Number(lsLastBreakDate) >= 86400000) {
-    localStorage.setItem("breakStreak", "0");
-    lsBreakStreak = "0";
-    localStorage.setItem("lastBreakDate", "0");
-    lsLastBreakDate = "0";
   }
 
   const TIMER_MS = 1200000;
@@ -117,7 +118,7 @@ function App() {
     if (valid) {
       setBreaks(breaks + 1);
       localStorage.setItem("breaks", (breaks + 1).toString());
-      localStorage.setItem("lastBreakDate", String(Date.now()));
+      refreshStreak()
     }
     setReadyToStartBreak(false);
     setTimeRemaining(0);
@@ -144,6 +145,29 @@ function App() {
     setReadyToStartBreak(true);
     stopTimers();
   }
+  function refreshStreak(noIncrement: boolean = false) {
+    // I am not sure if this streak system will work, but I need an MVP so this will do.
+    localStorage.setItem("lastBreakDate", Date.now().toString());
+    const dist = distanceBetweenDates(Number(lsLastBreakDate), Date.now());
+
+    if (dist > 1) {
+      // broke the streak!
+      localStorage.setItem("breakStreak", String(1));
+      setBreakStreak(1);
+      return;
+    } else {
+      if (noIncrement) return;
+      if (dist === 1) {
+        // 1 day after, so increment
+        localStorage.setItem("breakStreak", String(breakStreak + 1));
+        setBreakStreak(breakStreak + 1);
+        return;
+      }
+      // not 1 day yet, so don't increment
+      return;
+    }
+  }
+  refreshStreak(true)
   return (
     <div className="w-full h-full">
       <div className="flex flex-col gap-2 items-center justify-center h-full w-full">
@@ -156,7 +180,7 @@ function App() {
             {Math.floor(timeRemaining / 60000)}:
             {String(Math.floor((timeRemaining % 60000) / 1000)).padStart(
               2,
-              "0"
+              "0",
             )}
           </TimerBar>
         ) : (
@@ -168,7 +192,7 @@ function App() {
             {Math.floor(timeRemaining / 60000)}:
             {String(Math.floor((timeRemaining % 60000) / 1000)).padStart(
               2,
-              "0"
+              "0",
             )}
           </TimerBar>
         )}
@@ -213,7 +237,7 @@ function App() {
           {breakStarted ? (
             <button
               onClick={() => nextRound(false)}
-              className="bg-blue-900 rounded-full p-6 flex flex-row gap-2 border-blue-950 border-3 border-solid"
+              className="bg-blue-950 rounded-full p-6 flex flex-row gap-2 border-blue-900 hover:bg-blue-900 border-3 border-solid"
             >
               <FastForwardIcon width={24} height={24} />
               <p>Skip Break</p>
@@ -221,7 +245,7 @@ function App() {
           ) : (
             <button
               onClick={prepareStartBreak}
-              className="bg-blue-900 rounded-full p-6 flex flex-row gap-2 border-blue-950 border-3 border-solid"
+              className="bg-blue-950 rounded-full p-6 flex flex-row gap-2 border-blue-900 hover:bg-blue-900 border-3 border-solid"
             >
               <EyeClosedIcon width={24} height={24} />
               <p>Break</p>
@@ -229,7 +253,7 @@ function App() {
           )}
           <button
             onClick={stopClicked}
-            className="bg-orange-900 rounded-full p-6 flex flex-row gap-2 border-orange-950 border-3 border-solid"
+            className="bg-orange-950 rounded-full p-6 flex flex-row gap-2 border-orange-900 hover:bg-orange-900 border-3 border-solid"
           >
             <SquareStopIcon width={24} height={24} />
             <p>Stop</p>
@@ -245,13 +269,6 @@ function App() {
           </div>
           <div className="flex flex-col gap-1">
             <div className="flex flex-row gap-1 items-center">
-              <FootprintsIcon width={24} height={24} />
-              <p className="text-2xl font-bold">0</p>
-            </div>
-            <p>break streaks</p>
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="flex flex-row gap-1 items-center">
               <ClockCheckIcon width={24} height={24} />
               <p className="text-2xl font-bold">
                 {Math.round(breaks * (1 / 3) * 100) / 100}
@@ -262,7 +279,7 @@ function App() {
           <div className="flex flex-col gap-1">
             <div className="flex flex-row gap-1 items-center">
               <CalendarCheck2Icon width={24} height={24} />
-              <p className="text-2xl font-bold">18</p>
+              <p className="text-2xl font-bold">{breakStreak}</p>
             </div>
             <p>day streak</p>
           </div>
