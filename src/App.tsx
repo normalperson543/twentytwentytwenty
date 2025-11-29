@@ -4,7 +4,6 @@ import {
   ClockCheckIcon,
   EyeClosedIcon,
   FastForwardIcon,
-  FootprintsIcon,
   InfoIcon,
   PauseIcon,
   PlayIcon,
@@ -19,6 +18,7 @@ import TimerBar from "./components/timer-bar";
 
 function distanceBetweenDates(startTs: number, endTs: number) {
   // https://www.geeksforgeeks.org/javascript/how-to-calculate-the-number-of-days-between-two-dates-in-javascript/
+  // realized i didn't really need a tutorial for this :heavysob:
   const timeDifference = endTs - startTs;
   const daysDifference = timeDifference / (1000 * 3600 * 24);
   return daysDifference;
@@ -62,7 +62,6 @@ function App() {
 
   function startTimer() {
     startTimerAudio.play();
-    console.log("timer");
     stopTimers();
     timeStart.current = Date.now();
     setStarted(true);
@@ -76,16 +75,14 @@ function App() {
         setTimeRemaining(0);
         prepareStartBreak();
       } else {
-        console.log(Date.now());
-        console.log(timeStart.current);
         setTimeRemaining(timeStart.current + TIMER_MS - Date.now());
       }
     }, 100);
   }
   function startBreak() {
     startTimerAudio.play();
-    console.log("Bnreak");
     setReadyToStartBreak(false);
+    setIsPaused(false)
     stopTimers();
     timeStart.current = Date.now();
     setBreakStarted(true);
@@ -114,14 +111,14 @@ function App() {
 
   function nextRound(valid = false) {
     endBreakAudio.play();
-    console.log(valid);
     if (valid) {
       setBreaks(breaks + 1);
       localStorage.setItem("breaks", (breaks + 1).toString());
-      refreshStreak()
+      refreshStreak();
     }
     setReadyToStartBreak(false);
     setTimeRemaining(0);
+    setIsPaused(false)
     startTimer();
   }
 
@@ -135,7 +132,6 @@ function App() {
     }
   }
   function pauseTimerButtonClicked() {
-    console.log("Trying to stop timers...");
     pauseCheckpoint.current = Date.now() - timeStart.current;
     setIsPaused(true);
     stopTimers();
@@ -147,12 +143,23 @@ function App() {
   }
   function refreshStreak(noIncrement: boolean = false) {
     // I am not sure if this streak system will work, but I need an MVP so this will do.
-    localStorage.setItem("lastBreakDate", Date.now().toString());
-    const dist = distanceBetweenDates(Number(lsLastBreakDate), Date.now());
 
+    const dist = distanceBetweenDates(Number(lsLastBreakDate), Date.now());
+    if (Number(lsLastBreakDate) === 0 && !noIncrement) {
+      // first time most likely, so if they completed a break, incremenent by 1
+      localStorage.setItem("breakStreak", String(1));
+      localStorage.setItem("lastBreakDate", Date.now().toString());
+      lsLastBreakDate = Date.now().toString();
+      setBreakStreak(1);
+      return;
+    }
     if (dist > 1) {
       // broke the streak!
+      if (noIncrement) return;
+      // they probably did a break, so just increment the streak
       localStorage.setItem("breakStreak", String(1));
+      localStorage.setItem("lastBreakDate", Date.now().toString());
+      lsLastBreakDate = Date.now().toString();
       setBreakStreak(1);
       return;
     } else {
@@ -160,6 +167,8 @@ function App() {
       if (dist === 1) {
         // 1 day after, so increment
         localStorage.setItem("breakStreak", String(breakStreak + 1));
+        localStorage.setItem("lastBreakDate", Date.now().toString());
+        lsLastBreakDate = Date.now().toString();
         setBreakStreak(breakStreak + 1);
         return;
       }
@@ -167,7 +176,8 @@ function App() {
       return;
     }
   }
-  refreshStreak(true)
+  refreshStreak(true);
+
   return (
     <div className="w-full h-full">
       <div className="flex flex-col gap-2 items-center justify-center h-full w-full">
@@ -287,13 +297,15 @@ function App() {
         {breakStarted && (
           <div className="flex flex-row gap-3 items-center bg-amber-900 rounded-sm p-4">
             <InfoIcon width={16} height={16} />
-            Look at something <b>20</b> feet away
+            <div className="flex flex-row gap-1">
+              Look at something <b>20</b> feet away
+            </div>
           </div>
         )}
       </div>
 
       {readyToStartBreak && (
-        <div className="bg-amber-950 p-8 w-1/2 h-1/2 rounded-sm absolute top-1/2 left-1/2 -translate-1/2 shadow-xl shadow-amber-900 flex flex-col gap-3 justify-center items-center">
+        <div className="bg-amber-950 p-8 w-1/2 h-1/2 rounded-sm absolute top-1/2 left-1/2 -translate-1/2 flex flex-col gap-3 justify-center items-center">
           <div className="absolute -top-24 left-0 w-full shadow-xl shadow-blue-900">
             <TimerBar
               progressBarBgColor="#002570"
@@ -303,7 +315,7 @@ function App() {
               0:20
             </TimerBar>
           </div>
-          <h2 className="text-2xl font-bold">
+          <h2 className="text-2xl font-bold text-center">
             It's been 20 minutes, time to take a break.
           </h2>
           <div className="flex flex-row w-full justify-around">
@@ -329,14 +341,14 @@ function App() {
           <div className="flex flex-row gap-2">
             <button
               onClick={startBreak}
-              className="bg-green-900 rounded-full p-6 flex flex-row gap-2 border-green-950 border-3 border-solid"
+              className="bg-green-950 rounded-full p-6 flex flex-row gap-2 border-green-900 hover:bg-green-900 border-3 border-solid"
             >
               <EyeClosedIcon width={24} height={24} />
               <p>Start Break</p>
             </button>
             <button
               onClick={() => nextRound(false)}
-              className="bg-blue-900 rounded-full p-6 flex flex-row gap-2 border-blue-950 border-3 border-solid"
+              className="bg-blue-950 rounded-full p-6 flex flex-row gap-2 border-blue-900 hover:bg-blue-900 border-3 border-solid"
             >
               <FastForwardIcon width={24} height={24} />
               <p>Skip Break</p>

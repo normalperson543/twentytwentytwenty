@@ -13,11 +13,11 @@ export default function TimerBar({
     <div
       style={{
         background: `linear-gradient(to right,${progressBarBgColor} ${String(
-          progressPercentage
+          progressPercentage,
         )}%, ${barBgColor} ${progressPercentage}%)`,
       }}
       className="
-            w-full p-8 rounded-sm text-center font-bold text-5xl"
+            w-full p-8 text-center font-bold text-5xl"
     >
       {children}
     </div>
