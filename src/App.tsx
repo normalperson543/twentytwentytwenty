@@ -83,6 +83,7 @@ function App() {
     startTimerAudio.play();
     setReadyToStartBreak(false);
     setIsPaused(false)
+    setStarted(true)
     stopTimers();
     timeStart.current = Date.now();
     setBreakStarted(true);
